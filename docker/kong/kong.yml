@@ -1,18 +1,58 @@
 _format_version: "3.0"
+_transform: true
 
 services:
+  # ---------------------------------------------------------------------------
+  # Games Service
+  # ---------------------------------------------------------------------------
   - name: games-service
     url: http://games:4001
+    connect_timeout: 10000
+    read_timeout: 60000
+    write_timeout: 60000
     routes:
-      - name: games-routes
+      # REST: /games/* → games service (strips /games prefix)
+      - name: games-rest-route
         paths:
           - /games
         strip_path: true
+        protocols:
+          - http
+          - https
 
+      # WebSocket: /socket.io/* → games service (path preserved, strip_path false)
+      - name: games-ws-route
+        paths:
+          - /socket.io
+        strip_path: false
+        protocols:
+          - http
+          - https
+
+  # ---------------------------------------------------------------------------
+  # Wallets Service
+  # ---------------------------------------------------------------------------
   - name: wallets-service
     url: http://wallets:4002
+    connect_timeout: 10000
+    read_timeout: 30000
+    write_timeout: 30000
     routes:
-      - name: wallets-routes
+      # REST: /wallets/* → wallets service (strips /wallets prefix)
+      - name: wallets-rest-route
         paths:
           - /wallets
         strip_path: true
+        protocols:
+          - http
+          - https
+
+plugins:
+  # ---------------------------------------------------------------------------
+  # Rate limiting (bonus ⭐) — applied globally
+  # ---------------------------------------------------------------------------
+  - name: rate-limiting
+    config:
+      minute: 120
+      policy: local
+      limit_by: ip
