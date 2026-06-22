@@ -126,6 +126,9 @@ export class FakeEngine {
   ) {}
 
   // --- surface consumed by GameService ---
+  /** Rounds are created explicitly by tests, so bootstrap is a no-op here. */
+  async ensureStarted(): Promise<void> {}
+
   getActiveRound(): Round | null {
     return this.round && this.round.phase !== "SETTLED" ? this.round : null;
   }

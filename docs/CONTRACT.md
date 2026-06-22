@@ -92,7 +92,7 @@ type CurrentRoundResponse = {
 };
 ```
 
-> **Loop sob demanda (economia de recurso):** o ciclo de rodadas roda apenas enquanto há ao menos um cliente WebSocket conectado. O gatilho de início é a **conexão WebSocket** (o primeiro cliente abre uma nova `BETTING`), nunca uma chamada REST. Uma rodada já iniciada **sempre roda até o fim** (`SETTLED`), mesmo que todos desconectem no meio — apostas e liquidação não são abortadas. Quando não há rodada ativa (ocioso), este endpoint (e o `round:snapshot`) retorna a **última rodada `SETTLED`**. Em banco recém-criado, antes de qualquer rodada existir, retorna `404` (`ROUND_NOT_FOUND`).
+> **Loop sob demanda (economia de recurso):** o ciclo de rodadas roda apenas enquanto há atividade. O loop é **bootstrapado on-demand** por dois gatilhos: a **conexão WebSocket** (o primeiro cliente abre uma nova `BETTING`) **ou** uma leitura REST deste endpoint (`GET /games/rounds/current`) quando ocioso. Assim, quem entra pelo WS **ou** pelo REST encontra sempre um jogo ativo. O bootstrap é **idempotente** (só inicia se não houver rodada/engine ativos) e — por ser um efeito de inicialização sob demanda, não uma ação de jogo — não fere a regra de que apostar/sacar são sempre via endpoints próprios. Uma rodada já iniciada **sempre roda até o fim** (`SETTLED`), mesmo que todos desconectem no meio — apostas e liquidação não são abortadas. Quando ocioso e ainda não houve bootstrap nesta requisição, este endpoint (e o `round:snapshot`) pode retornar a **última rodada `SETTLED`**. Em banco recém-criado, antes de qualquer rodada existir e antes do bootstrap, retorna `404` (`ROUND_NOT_FOUND`).
 
 ### `GET /games/rounds/history?page=1&limit=20` (sem auth)
 ```typescript
@@ -114,16 +114,23 @@ type RoundHistoryResponse = {
 ```typescript
 type VerifyResponse = {
   roundId: string;
-  serverSeed: string;          // revelada após o crash
+  serverSeed: string | null;   // REVELADO só após o crash (CRASHED/SETTLED); null enquanto BETTING/RUNNING
   serverHash: string;          // hash publicado ANTES da rodada (deve bater com serverHash do current)
   clientSeed: string;          // string pública fixa "crash-game-public-seed" (ver seção 4)
   nonce: number;               // número sequencial da rodada na hash chain
-  crashMultiplier: string;
+  crashMultiplier: string | null; // null enquanto a rodada não crashou
   // O verificador deve poder recalcular crashMultiplier a partir de
   // (serverSeed, clientSeed, nonce) usando o algoritmo da seção 4
   // e confirmar que bate, E confirmar que HASH(serverSeed) === serverHash.
 };
 ```
+
+> **Commit-reveal (provably fair):** enquanto a rodada está ativa (`BETTING`/`RUNNING`),
+> o `serverSeed` **não** é exposto — apenas o `serverHash` (o commit). Revelar o seed
+> antes do crash permitiria recalcular o `crashMultiplier` antecipadamente. O `serverSeed`
+> e o `crashMultiplier` só são retornados quando a rodada está `CRASHED`/`SETTLED`. Isso é
+> consistente com o README ("exibição do **hash** da seed **antes** da rodada"; verificação
+> de "qualquer rodada **passada**").
 
 ### `GET /games/bets/me?page=1&limit=20` (auth)
 ```typescript
@@ -367,7 +374,8 @@ Todos os eventos seguem `{ type: string, payload: T, timestamp: string }`.
 - House edge fixo em 1% no cálculo do crash point.
 - `clientSeed`: **string pública fixa `"crash-game-public-seed"`** (provably fair não tem padrão único; verificação independente é satisfeita assim).
 - Nomenclatura: hash da server seed é **`serverHash`** em todo o contrato (REST e WS).
-- Loop de rodadas **sob demanda**: roda só com ≥1 cliente WS conectado (economia de recurso); rodada iniciada sempre completa até `SETTLED`; ocioso → `current`/`round:snapshot` devolvem a última `SETTLED`; sem nenhuma rodada → `404 ROUND_NOT_FOUND`.
+- Loop de rodadas **sob demanda**, bootstrapado por **conexão WS ou leitura REST** de `GET /rounds/current` (idempotente) — quem entra por qualquer um dos dois encontra um jogo ativo. Rodada iniciada sempre completa até `SETTLED`; ocioso (antes de bootstrap) → `current`/`round:snapshot` devolvem a última `SETTLED`; sem nenhuma rodada e antes de bootstrap → `404 ROUND_NOT_FOUND`. (Revisado: o gatilho REST foi liberado — o README não o proíbe; antes o contrato restringia a WS.)
+- **Provably fair — commit-reveal:** `/verify` revela `serverSeed` e `crashMultiplier` **apenas** em rodadas `CRASHED`/`SETTLED`; em rodada ativa retorna `serverSeed: null` / `crashMultiplier: null` (só o commit `serverHash` é público antes do crash).
 - Idempotência: **Redis** (`SET NX` por `eventId`), adicionado ao `docker-compose` como serviço de infra.
 - Saldo inicial do usuário de teste: **seed/migration idempotente** (exceção à regra de crédito-só-via-evento), Postgres persistido por volume Docker.
 - Multiplicador representado internamente como inteiro de centésimos; payout por aritmética inteira com truncamento (floor).

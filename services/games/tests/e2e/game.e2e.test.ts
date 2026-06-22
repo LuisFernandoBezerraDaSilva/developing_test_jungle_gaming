@@ -233,15 +233,24 @@ describe("Read endpoints", () => {
     expect(res.body.bets[0].username).toBe("user-player-snap");
   });
 
-  it("GET /rounds/:id/verify exposes the provably-fair data", async () => {
+  it("GET /rounds/:id/verify reveals serverSeed only AFTER the crash (commit-reveal)", async () => {
     const round = await engine.newBettingRound();
     await engine.startRunning("2.00");
+
+    // Rodada ainda ativa (RUNNING): só o commit (hash), seed NÃO revelado
+    const active = await api("GET", `/rounds/${round.id}/verify`);
+    expect(active.status).toBe(200);
+    expect(active.body.serverHash).toBeDefined();
+    expect(active.body.serverSeed).toBeNull();
+    expect(active.body.crashMultiplier).toBeNull();
+
     await engine.crashAndSettle("2.00");
 
-    const res = await api("GET", `/rounds/${round.id}/verify`);
-    expect(res.status).toBe(200);
-    expect(res.body.clientSeed).toBe("crash-game-public-seed");
-    expect(res.body.serverHash).toBeDefined();
-    expect(res.body.serverSeed).toBeDefined();
+    // Após o crash: seed revelado e recomputável a partir do hash
+    const settled = await api("GET", `/rounds/${round.id}/verify`);
+    expect(settled.status).toBe(200);
+    expect(settled.body.clientSeed).toBe("crash-game-public-seed");
+    expect(typeof settled.body.serverSeed).toBe("string");
+    expect(settled.body.crashMultiplier).toBe("2.00");
   });
 });

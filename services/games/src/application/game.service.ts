@@ -131,6 +131,10 @@ export class GameService {
   }
 
   async getCurrentRound() {
+    // Bootstrap on-demand: além da conexão WS, uma leitura REST também inicia o
+    // loop quando ocioso, de modo que quem entra pelo REST encontra um jogo ativo
+    // (CONTRACT §2). Idempotente: só inicia se não houver rodada/engine ativos.
+    await this.engine.ensureStarted();
     const round = await this.engine.getOrLoadCurrentRound();
     if (!round) {
       throw new NotFoundException({ statusCode: 404, error: "ROUND_NOT_FOUND", message: "No round found" });
@@ -159,13 +163,17 @@ export class GameService {
     if (!round) {
       throw new NotFoundException({ statusCode: 404, error: "ROUND_NOT_FOUND", message: "Round not found" });
     }
+    // Commit-reveal: o serverSeed (reveal) só é exposto APÓS o crash. Antes disso
+    // o jogador tem apenas o serverHash (commit). Revelar o seed numa rodada ativa
+    // permitiria recalcular o crashMultiplier antecipadamente (CONTRACT §4, README).
+    const revealed = round.phase === "CRASHED" || round.phase === "SETTLED";
     return {
       roundId: round.id,
-      serverSeed: round.serverSeed,
+      serverSeed: revealed ? round.serverSeed : null,
       serverHash: round.serverHash,
       clientSeed: round.clientSeed,
       nonce: round.nonce,
-      crashMultiplier: round.crashMultiplier ?? "1.00",
+      crashMultiplier: revealed ? round.crashMultiplier : null,
     };
   }
 

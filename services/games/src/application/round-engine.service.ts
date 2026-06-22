@@ -58,6 +58,17 @@ export class RoundEngineService implements OnModuleDestroy {
     return this.roundRepo.findCurrent();
   }
 
+  /**
+   * Bootstrap on-demand a partir de uma leitura REST (GET /rounds/current).
+   * Inicia o loop apenas se não houver engine/rodada ativos — idempotente.
+   * Complementa o gatilho por conexão WS (CONTRACT §2).
+   */
+  async ensureStarted(): Promise<void> {
+    if (!this.engineRunning && !this.activeRound) {
+      await this.startEngine();
+    }
+  }
+
   private async startEngine(): Promise<void> {
     this.engineRunning = true;
     this.logger.log("Engine started");
