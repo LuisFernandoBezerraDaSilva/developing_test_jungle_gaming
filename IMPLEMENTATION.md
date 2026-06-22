@@ -97,5 +97,114 @@ Cobertos: crédito/débito/saldo insuficiente, ciclo de vida do Round, lógica d
 
 ## Decisões de Arquitetura — Frontend
 
-> _A preencher pelo Copilot (trilha de frontend)._
+> Trilha de frontend (Copilot). App em `frontend/` — Vite + React 19 + TypeScript
+> strict + Tailwind v4. O contrato (`docs/CONTRACT.md`) é a fonte única de verdade
+> de schemas REST, eventos WS e códigos de erro.
+
+### Organização em camadas (MVC adaptado)
+Separação explícita de responsabilidades, espelhando o DDD do backend:
+- **Page** (`pages/`) — composição da rota e orquestração de estado da tela
+  (ex.: `GamePage` monta os hooks `useGameSocket`/`useAutoPlay`/`useSoundEffects`
+  e os componentes). Não fala com APIs diretamente.
+- **Component** (`components/`) — apresentação reutilizável. `components/ui/*` são
+  primitivos (Button/Card/Input/Skeleton); `components/game/*` são as telas do jogo.
+- **Service** (`services/`) — toda integração externa: `http.ts` (REST via Kong),
+  `ws.service.ts` (socket.io), `auth.service.ts` (OIDC), `game/wallet.service.ts`,
+  `sound.service.ts`. Nenhum componente importa `fetch`/`oidc-client-ts` direto.
+
+### Server state vs. client state
+- **TanStack Query** para *server state* (saldo, histórico, apostas): cache,
+  revalidação e invalidação por `queryKey`. Eventos WS de liquidação invalidam
+  `['wallet']` e `['rounds','history']` em vez de mutar cache manualmente.
+- **Zustand** para *client state* de tempo real e preferências:
+  - `round.store` — estado da rodada dirigido **exclusivamente** pelos eventos WS.
+  - `auth.store` — sessão/usuário derivados do OIDC.
+  - `settings.store` — preferências (som, auto-cashout, auto-bet) com `persist` no
+    `localStorage`.
+
+### Multiplicador: servidor é a única fonte de verdade (E4)
+O multiplicador exibido vem **somente** do evento `round:tick`; nunca é
+recalculado localmente. A curva do `CrashChart` é apenas uma representação visual
+derivada do valor corrente. Assim, múltiplas abas mostram exatamente o mesmo
+estado — requisito eliminatório de sincronização.
+
+### Precisão monetária (BigInt, sem float)
+Valores chegam como `string` de centavos e **nunca** são convertidos para `number`
+em cálculo. `lib/money.ts` centraliza tudo em `BigInt`:
+`formatCents`, `multiplierToCentesimos`, `computePayoutCents` (`floor(amount ×
+centésimos / 100)`) e `reaisToCents`. O JSON é parseado com `JSON.parse` padrão
+(mantém strings como strings) — sem coerção numérica no `http.ts`.
+
+### Autenticação (OIDC code + PKCE S256)
+`oidc-client-ts` com `response_type=code` (PKCE S256 por padrão) contra o realm
+`crash-game` / client `crash-game-client`. Rotas protegidas via `ProtectedRoute`;
+o `http.ts` injeta `Authorization: Bearer` apenas em chamadas marcadas `auth`,
+buscando o token sempre do `UserManager` (com silent renew). A configuração do
+Keycloak em si é responsabilidade da trilha de backend/infra.
+
+### WebSocket e a room privada
+`ws.service` conecta no namespace `/game` com o JWT no `auth` do handshake, o que
+faz o servidor associar o socket à room `player:<sub>` — necessária para o evento
+privado `bet:rejected`. Sem token, recebem-se só broadcasts. O hook
+`useGameSocket` registra os listeners (§5), despacha para o `round.store` e
+concentra os efeitos de UX (toasts, invalidação de queries), reconectando quando o
+token muda.
+
+### Liquidação otimista e compensação na UI
+Como o saldo só é validado de forma assíncrona pela saga (§ backend), a UI é
+otimista e compensa:
+- `bet:rejected` → remove a aposta otimista do próprio jogador do `round.store` e
+  exibe toast (mensagem dedicada para `INSUFFICIENT_BALANCE`).
+- `round:crashed` → liquida a lista visível: apostas `PENDING` viram `LOST`
+  (payout `'0'`) e `CASHED_OUT` viram `WON`, refletindo o resultado sem esperar
+  refetch.
+
+### Tratamento de erro padronizado
+`HttpError` mapeia o envelope de erro do contrato (`statusCode`/`error`/`message`).
+As mutations de aposta/cashout transformam isso em toasts (`sonner`), com fallback
+amigável quando o backend não retorna o envelope esperado.
+
+### Provably fair no cliente (bônus)
+`lib/provablyFair.ts` reimplementa o algoritmo do §4 de forma **independente** via
+Web Crypto API (SHA-256 + HMAC-SHA256), permitindo ao jogador confirmar, sem
+confiar no servidor: `SHA256(serverSeed) === serverHash` e o crash point recalculado
+== `crashMultiplier`. O `serverHash` é exibido **antes** da rodada e o `serverSeed`
+após o crash; o `ProvablyFairDialog` consome `GET /games/rounds/:id/verify`.
+
+### Automação de jogo (bônus)
+- **Auto Cash Out** — saca quando o multiplicador **do servidor** atinge o alvo;
+  apenas *lê* o tick e dispara o REST, nunca recalcula estado.
+- **Auto Bet** — estratégias `fixed`/`martingale` com stop-lucro/stop-perda, toda a
+  matemática em `BigInt` centavos (`lib/autobet.ts`, puro e testável). O hook
+  `useAutoPlay` orquestra com guards por `roundId` (uma ação por rodada).
+- **Efeitos sonoros** — `sound.service` sintetiza tons via Web Audio API (sem
+  assets binários); `useSoundEffects` reage às transições de rodada/aposta,
+  respeitando a preferência `soundEnabled`. AudioContext só é tocado em hooks/
+  componentes (nunca importado em testes, pois não existe em jsdom).
+
+### UI/UX
+Dark mode com estética cassino (acentos neon), responsivo (grid desktop + coluna
+única no mobile), animações de subida/crash, loading states com `Skeleton` e erros
+via toast. Componentes `ui/*` próprios (estilo shadcn) em vez de uma lib pesada,
+mantendo o bundle enxuto.
+
+### Configuração de ambiente
+`config/env.ts` concentra as variáveis `VITE_*` com defaults para a infra local
+(Kong `:8000`, Keycloak `:8080`). `VITE_WS_URL` é separável da URL REST para
+permitir apontar o socket.io diretamente ao Game Service caso o roteamento WS do
+Kong não esteja disponível.
+
+### Testes (frontend)
+Vitest + jsdom + Testing Library. Cobrem a lógica pura crítica: aritmética
+monetária (`money`), estratégias de auto-bet (`autobet`), verificação provably
+fair (`provablyFair`, com vetores conhecidos SHA-256/HMAC) e o `settings.store`.
+
+```bash
+cd frontend && npm run test      # vitest run
+cd frontend && npm run lint      # eslint
+cd frontend && npm run build     # tsc -b && vite build
+```
+
+**Resultado verificado:** Frontend **22/22** testes · ESLint sem erros · build
+de produção sem erros de tipo (`tsc -b`).
 

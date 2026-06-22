@@ -4,7 +4,11 @@ import { BetControls } from '@/components/game/BetControls';
 import { BetsList } from '@/components/game/BetsList';
 import { RoundHistory } from '@/components/game/RoundHistory';
 import { PlayerInfo } from '@/components/game/PlayerInfo';
+import { AutoPlayPanel } from '@/components/game/AutoPlayPanel';
+import { ProvablyFairDialog } from '@/components/game/ProvablyFairDialog';
 import { useGameSocket } from '@/hooks/useGameSocket';
+import { useAutoPlay } from '@/hooks/useAutoPlay';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 import { walletService } from '@/services/wallet.service';
 
 /**
@@ -14,6 +18,8 @@ import { walletService } from '@/services/wallet.service';
  */
 export function GamePage() {
   useGameSocket();
+  useAutoPlay();
+  useSoundEffects();
 
   useEffect(() => {
     // Garante a existência da carteira ao entrar no jogo (idempotente).
@@ -28,6 +34,9 @@ export function GamePage() {
         {/* Coluna principal */}
         <div className="flex flex-col gap-4">
           <CrashChart />
+          <div className="flex justify-end">
+            <ProvablyFairDialog />
+          </div>
           <RoundHistory />
           <BetsList />
         </div>
@@ -36,6 +45,7 @@ export function GamePage() {
         <div className="flex flex-col gap-4">
           <PlayerInfo />
           <BetControls />
+          <AutoPlayPanel />
         </div>
       </div>
     </div>

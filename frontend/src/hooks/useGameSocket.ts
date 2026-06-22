@@ -26,6 +26,7 @@ import type {
  */
 export function useGameSocket(): void {
   const accessToken = useAuthStore((s) => s.user?.accessToken ?? null);
+  const userSub = useAuthStore((s) => s.user?.sub ?? null);
   const queryClient = useQueryClient();
 
   const applySnapshot = useRoundStore((s) => s.applySnapshot);
@@ -35,6 +36,7 @@ export function useGameSocket(): void {
   const applyCrashed = useRoundStore((s) => s.applyCrashed);
   const applyBetPlaced = useRoundStore((s) => s.applyBetPlaced);
   const applyBetCashedOut = useRoundStore((s) => s.applyBetCashedOut);
+  const applyBetRejected = useRoundStore((s) => s.applyBetRejected);
 
   useEffect(() => {
     const socket = wsService.connect(accessToken);
@@ -63,6 +65,8 @@ export function useGameSocket(): void {
     );
     socket.on('bet:rejected', (e: WsEnvelope<BetRejectedPayload>) => {
       const reason = e.payload.reason;
+      // Compensação na UI: remove a aposta otimista do próprio jogador.
+      if (userSub) applyBetRejected(userSub);
       toast.error(
         reason === 'INSUFFICIENT_BALANCE'
           ? 'Saldo insuficiente — aposta rejeitada.'
@@ -77,6 +81,7 @@ export function useGameSocket(): void {
     };
   }, [
     accessToken,
+    userSub,
     queryClient,
     applySnapshot,
     applyBettingStarted,
@@ -85,5 +90,6 @@ export function useGameSocket(): void {
     applyCrashed,
     applyBetPlaced,
     applyBetCashedOut,
+    applyBetRejected,
   ]);
 }

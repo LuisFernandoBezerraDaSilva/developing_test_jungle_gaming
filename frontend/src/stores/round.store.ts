@@ -36,6 +36,7 @@ type RoundState = {
   applyCrashed: (p: RoundCrashedPayload) => void;
   applyBetPlaced: (p: BetPlacedPayload) => void;
   applyBetCashedOut: (p: BetCashedOutPayload) => void;
+  applyBetRejected: (playerId: string) => void;
 };
 
 const initial = {
@@ -93,7 +94,21 @@ export const useRoundStore = create<RoundState>((set) => ({
   applyCrashed(p) {
     set((s) =>
       s.roundId === p.roundId
-        ? { phase: 'CRASHED', multiplier: p.crashMultiplier, crash: p }
+        ? {
+            phase: 'CRASHED',
+            multiplier: p.crashMultiplier,
+            crash: p,
+            // Liquidação refletida na lista: quem não sacou perde; quem sacou ganha.
+            bets: s.bets.map((b) => {
+              if (b.status === 'PENDING') {
+                return { ...b, status: 'LOST', payoutCents: '0' };
+              }
+              if (b.status === 'CASHED_OUT') {
+                return { ...b, status: 'WON' };
+              }
+              return b;
+            }),
+          }
         : s,
     );
   },
@@ -130,5 +145,9 @@ export const useRoundStore = create<RoundState>((set) => ({
         ),
       };
     });
+  },
+
+  applyBetRejected(playerId) {
+    set((s) => ({ bets: s.bets.filter((b) => b.playerId !== playerId) }));
   },
 }));
