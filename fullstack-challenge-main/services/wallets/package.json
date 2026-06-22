@@ -1,0 +1,33 @@
+{
+  "name": "@crash/wallets",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/main.ts",
+    "start": "bun run src/main.ts",
+    "db:migrate": "bunx prisma migrate deploy",
+    "db:generate": "bunx prisma generate",
+    "test": "bun test tests/unit",
+    "test:e2e": "bun test tests/e2e"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.17",
+    "@nestjs/core": "^11.1.17",
+    "@nestjs/microservices": "^11.1.17",
+    "@nestjs/platform-express": "^11.1.17",
+    "@prisma/client": "^6.9.0",
+    "amqplib": "^0.10.5",
+    "ioredis": "^5.6.1",
+    "jwks-rsa": "^3.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.7",
+    "@types/jsonwebtoken": "^9.0.9",
+    "bun-types": "latest",
+    "prisma": "^6.9.0",
+    "typescript": "^5.8.3"
+  }
+}
