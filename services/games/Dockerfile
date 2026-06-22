@@ -4,8 +4,8 @@ WORKDIR /app
 
 RUN apk add --no-cache curl
 
-COPY package.json ./
-RUN bun install
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
 COPY . .
 
