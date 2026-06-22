@@ -7,6 +7,7 @@ import {
   Req,
   Query,
   Param,
+  HttpCode,
 } from "@nestjs/common";
 import { HealthCheckResponseDto } from "../dtos/health-check-response.dto";
 import { GameService } from "../../application/game.service";
@@ -61,6 +62,7 @@ export class GamesController {
   }
 
   @Post("bet/cashout")
+  @HttpCode(200)
   @UseGuards(JwtGuard)
   async cashout(@Req() req: Request & { playerId: string }) {
     return this.gameService.cashout(req.playerId);
