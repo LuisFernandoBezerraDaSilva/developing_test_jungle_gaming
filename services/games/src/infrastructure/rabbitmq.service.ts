@@ -8,7 +8,7 @@ const MAX_RETRIES = 5;
 @Injectable()
 export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RabbitMQService.name);
-  private connection: amqp.Connection;
+  private connection: amqp.ChannelModel;
   private channel: amqp.Channel;
 
   async onModuleInit(): Promise<void> {

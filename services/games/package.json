@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.7",
+    "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.9",
     "bun-types": "latest",
     "prisma": "^6.9.0",
