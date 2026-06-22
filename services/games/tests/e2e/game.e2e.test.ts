@@ -8,6 +8,7 @@ import { ROUND_REPOSITORY } from "../../src/domain/round.repository";
 import { BET_REPOSITORY } from "../../src/domain/bet.repository";
 import { RabbitMQService } from "../../src/infrastructure/rabbitmq.service";
 import { RedisService } from "../../src/infrastructure/redis.service";
+import { KeycloakService } from "../../src/infrastructure/keycloak.service";
 import { JwtGuard } from "../../src/infrastructure/jwt.guard";
 import {
   InMemoryBus,
@@ -75,6 +76,7 @@ beforeAll(async () => {
       { provide: RabbitMQService, useValue: bus },
       { provide: RedisService, useValue: new InMemoryRedis() },
       { provide: RoundEngineService, useValue: engine },
+      { provide: KeycloakService, useValue: { getUsername: async (id: string) => `user-${id}` } },
     ],
   })
     .overrideGuard(JwtGuard)
@@ -219,12 +221,16 @@ describe("Scenario 3 — validation & saga errors", () => {
 });
 
 describe("Read endpoints", () => {
-  it("GET /rounds/current returns the active round snapshot", async () => {
+  it("GET /rounds/current returns the active round snapshot with Keycloak-resolved usernames", async () => {
     await engine.newBettingRound();
+    await api("POST", "/bet", { token: "player-snap", body: { amountCents: "10000" } });
+
     const res = await api("GET", "/rounds/current");
     expect(res.status).toBe(200);
     expect(res.body.phase).toBe("BETTING");
     expect(typeof res.body.serverHash).toBe("string");
+    // username não é derivado localmente — vem do KeycloakService (fake: user-<id>)
+    expect(res.body.bets[0].username).toBe("user-player-snap");
   });
 
   it("GET /rounds/:id/verify exposes the provably-fair data", async () => {

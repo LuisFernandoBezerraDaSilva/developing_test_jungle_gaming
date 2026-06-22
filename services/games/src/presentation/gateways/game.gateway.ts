@@ -63,14 +63,16 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     try {
       const round = await this.engine.getOrLoadCurrentRound();
       if (round) {
-        const bets = round.bets.map((b) => ({
-          playerId: b.playerId,
-          username: `player-${b.playerId.substring(0, 8)}`,
-          amountCents: b.amountCents.toString(),
-          status: b.status,
-          cashoutMultiplier: b.cashoutMultiplier,
-          payoutCents: b.payoutCents?.toString() ?? null,
-        }));
+        const bets = await Promise.all(
+          round.bets.map(async (b) => ({
+            playerId: b.playerId,
+            username: await this.gameService.resolveUsername(b.playerId),
+            amountCents: b.amountCents.toString(),
+            status: b.status,
+            cashoutMultiplier: b.cashoutMultiplier,
+            payoutCents: b.payoutCents?.toString() ?? null,
+          })),
+        );
 
         const currentMultiplier = round.phase === "RUNNING"
           ? multiplierAt((Date.now() - round.phaseStartedAt.getTime()) / 1000).toFixed(2)

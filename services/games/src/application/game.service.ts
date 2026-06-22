@@ -11,6 +11,7 @@ import type { BetRepository } from "../domain/bet.repository";
 import { BET_REPOSITORY } from "../domain/bet.repository";
 import { RabbitMQService } from "../infrastructure/rabbitmq.service";
 import { RedisService } from "../infrastructure/redis.service";
+import { KeycloakService } from "../infrastructure/keycloak.service";
 import { RoundEngineService } from "./round-engine.service";
 import { Bet } from "../domain/bet.entity";
 import { randomUUID } from "crypto";
@@ -30,7 +31,6 @@ interface DebitResultPayload {
 export class GameService {
   private readonly logger = new Logger(GameService.name);
   private wsGateway: { emitToPlayer: (playerId: string, event: string, data: unknown) => void; emitAll: (event: string, data: unknown) => void } | null = null;
-  private usernameCache: Map<string, { username: string; expiresAt: number }> = new Map();
 
   constructor(
     @Inject(ROUND_REPOSITORY) private readonly roundRepo: RoundRepository,
@@ -38,6 +38,7 @@ export class GameService {
     private readonly rabbitmq: RabbitMQService,
     private readonly redis: RedisService,
     private readonly engine: RoundEngineService,
+    private readonly keycloak: KeycloakService,
   ) {}
 
   setGateway(gateway: { emitToPlayer: (playerId: string, event: string, data: unknown) => void; emitAll: (event: string, data: unknown) => void }): void {
@@ -81,7 +82,7 @@ export class GameService {
       amountCents: amountCentsStr,
     });
 
-    const username = this.resolveUsername(playerId);
+    const username = await this.resolveUsername(playerId);
     this.wsGateway?.emitAll("bet:placed", {
       type: "bet:placed",
       payload: { roundId: round.id, playerId, username, amountCents: amountCentsStr },
@@ -109,7 +110,7 @@ export class GameService {
 
     const { bet, multiplierStr } = result;
 
-    const username = this.resolveUsername(playerId);
+    const username = await this.resolveUsername(playerId);
     this.wsGateway?.emitAll("bet:cashed_out", {
       type: "bet:cashed_out",
       payload: {
@@ -217,23 +218,22 @@ export class GameService {
     }
   }
 
-  private resolveUsername(playerId: string): string {
-    const cached = this.usernameCache.get(playerId);
-    if (cached && cached.expiresAt > Date.now()) return cached.username;
-    const username = `player-${playerId.substring(0, 8)}`;
-    this.usernameCache.set(playerId, { username, expiresAt: Date.now() + 5 * 60 * 1000 });
-    return username;
+  /** Resolve o username a partir do Keycloak (fonte única, ver CONTRACT §0). */
+  resolveUsername(playerId: string): Promise<string> {
+    return this.keycloak.getUsername(playerId);
   }
 
   private async formatRound(round: import("../domain/round.entity").Round) {
-    const bets = round.bets.map((b) => ({
-      playerId: b.playerId,
-      username: this.resolveUsername(b.playerId),
-      amountCents: b.amountCents.toString(),
-      status: b.status,
-      cashoutMultiplier: b.cashoutMultiplier,
-      payoutCents: b.payoutCents?.toString() ?? null,
-    }));
+    const bets = await Promise.all(
+      round.bets.map(async (b) => ({
+        playerId: b.playerId,
+        username: await this.resolveUsername(b.playerId),
+        amountCents: b.amountCents.toString(),
+        status: b.status,
+        cashoutMultiplier: b.cashoutMultiplier,
+        payoutCents: b.payoutCents?.toString() ?? null,
+      })),
+    );
 
     const currentMultiplier = round.phase === "RUNNING"
       ? multiplierAt((Date.now() - round.phaseStartedAt.getTime()) / 1000).toFixed(2)

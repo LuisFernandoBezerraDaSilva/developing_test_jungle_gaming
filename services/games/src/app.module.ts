@@ -4,6 +4,7 @@ import { GameGateway } from "./presentation/gateways/game.gateway";
 import { PrismaService } from "./infrastructure/prisma.service";
 import { RabbitMQService } from "./infrastructure/rabbitmq.service";
 import { RedisService } from "./infrastructure/redis.service";
+import { KeycloakService } from "./infrastructure/keycloak.service";
 import { RoundPrismaRepository } from "./infrastructure/round.prisma-repository";
 import { BetPrismaRepository } from "./infrastructure/bet.prisma-repository";
 import { RoundEngineService } from "./application/round-engine.service";
@@ -18,6 +19,7 @@ import { BET_REPOSITORY } from "./domain/bet.repository";
     PrismaService,
     RabbitMQService,
     RedisService,
+    KeycloakService,
     JwtGuard,
     { provide: ROUND_REPOSITORY, useClass: RoundPrismaRepository },
     { provide: BET_REPOSITORY, useClass: BetPrismaRepository },
