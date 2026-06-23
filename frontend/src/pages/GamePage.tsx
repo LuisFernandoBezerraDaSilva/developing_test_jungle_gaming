@@ -5,6 +5,7 @@ import { BetsList } from '@/components/game/BetsList';
 import { RoundHistory } from '@/components/game/RoundHistory';
 import { PlayerInfo } from '@/components/game/PlayerInfo';
 import { AutoPlayPanel } from '@/components/game/AutoPlayPanel';
+import { Leaderboard } from '@/components/game/Leaderboard';
 import { ProvablyFairDialog } from '@/components/game/ProvablyFairDialog';
 import { useGameSocket } from '@/hooks/useGameSocket';
 import { useAutoPlay } from '@/hooks/useAutoPlay';
@@ -46,6 +47,7 @@ export function GamePage() {
           <PlayerInfo />
           <BetControls />
           <AutoPlayPanel />
+          <Leaderboard />
         </div>
       </div>
     </div>

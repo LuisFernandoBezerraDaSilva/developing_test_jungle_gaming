@@ -2,6 +2,7 @@ import { http } from './http';
 import type {
   CashoutResponse,
   CurrentRoundResponse,
+  LeaderboardResponse,
   MyBetsResponse,
   PlaceBetResponse,
   RoundHistoryResponse,
@@ -28,6 +29,13 @@ export const gameService = {
   /** Dados de verificação provably fair de uma rodada (sem auth). */
   verify(roundId: string): Promise<VerifyResponse> {
     return http.get<VerifyResponse>(`/games/rounds/${roundId}/verify`);
+  },
+
+  /** Leaderboard — top jogadores por lucro no período (sem auth). */
+  leaderboard(period: '24h' | 'week' = '24h'): Promise<LeaderboardResponse> {
+    return http.get<LeaderboardResponse>('/games/leaderboard', {
+      query: { period },
+    });
   },
 
   /** Histórico de apostas do jogador autenticado. */

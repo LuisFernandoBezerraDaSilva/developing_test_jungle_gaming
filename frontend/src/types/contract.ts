@@ -93,11 +93,25 @@ export type RoundHistoryResponse = {
 
 export type VerifyResponse = {
   roundId: string;
-  serverSeed: string;
+  serverSeed: string | null; // revelado só após o crash (CRASHED/SETTLED)
   serverHash: string;
   clientSeed: string;
   nonce: number;
-  crashMultiplier: string;
+  crashMultiplier: string | null; // null enquanto a rodada não crashou
+};
+
+// Leaderboard (bônus) — top jogadores por lucro líquido no período.
+export type LeaderboardEntry = {
+  rank: number;
+  playerId: string;
+  username: string;
+  profitCents: string; // pode ser negativo (string), ex: "-10000"
+  totalBets: number;
+};
+
+export type LeaderboardResponse = {
+  period: '24h' | 'week';
+  entries: LeaderboardEntry[];
 };
 
 export type MyBet = {

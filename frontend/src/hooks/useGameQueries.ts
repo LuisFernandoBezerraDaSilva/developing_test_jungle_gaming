@@ -11,6 +11,7 @@ import { HttpError } from '@/services/http';
 import { useAuthStore } from '@/stores/auth.store';
 import type {
   CashoutResponse,
+  LeaderboardResponse,
   PlaceBetResponse,
   RoundHistoryResponse,
   WalletResponse,
@@ -37,6 +38,17 @@ export function useRoundHistory(limit = 20): UseQueryResult<RoundHistoryResponse
   return useQuery({
     queryKey: ['rounds', 'history', limit],
     queryFn: () => gameService.history(1, limit),
+  });
+}
+
+/** Leaderboard — top jogadores por lucro (revalida a cada 30s). */
+export function useLeaderboard(
+  period: '24h' | 'week' = '24h',
+): UseQueryResult<LeaderboardResponse> {
+  return useQuery({
+    queryKey: ['leaderboard', period],
+    queryFn: () => gameService.leaderboard(period),
+    refetchInterval: 30_000,
   });
 }
 

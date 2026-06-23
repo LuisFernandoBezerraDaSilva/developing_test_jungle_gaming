@@ -66,6 +66,12 @@ function VerifyModal({
     setResult(null);
     try {
       const reveal = await gameService.verify(roundId.trim());
+      // Commit-reveal: o seed só é revelado após o crash. Em rodada ativa,
+      // serverSeed/crashMultiplier vêm null e não há o que verificar ainda.
+      if (!reveal.serverSeed || !reveal.crashMultiplier) {
+        setError('Rodada ainda não crashou — o seed só é revelado após o crash.');
+        return;
+      }
       const verification = await verifyRound({
         serverSeed: reveal.serverSeed,
         serverHash: reveal.serverHash,
