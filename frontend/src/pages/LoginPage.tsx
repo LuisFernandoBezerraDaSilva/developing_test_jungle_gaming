@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuthStore } from '@/stores/auth.store';
 import { Rocket } from 'lucide-react';
 
@@ -7,7 +8,11 @@ export function LoginPage() {
   const login = useAuthStore((s) => s.login);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-4">
+    <div className="relative flex min-h-screen flex-col items-center justify-center gap-8 px-4">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
+
       <div className="flex flex-col items-center gap-3 text-center">
         <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/15 text-primary">
           <Rocket className="size-8" />

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useWallet } from '@/hooks/useGameQueries';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatCents } from '@/lib/money';
@@ -16,15 +17,18 @@ export function PlayerInfo() {
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle>Jogador</CardTitle>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => logout()}
-          aria-label="Sair"
-          className="text-muted-foreground"
-        >
-          <LogOut className="size-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => logout()}
+            aria-label="Sair"
+            className="text-muted-foreground"
+          >
+            <LogOut className="size-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-2">
         <p className="text-lg font-semibold">{user?.username ?? '—'}</p>
