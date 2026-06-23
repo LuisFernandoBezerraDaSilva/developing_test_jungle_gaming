@@ -146,14 +146,14 @@ function Toggle({
       <span className="text-sm font-medium">{label}</span>
       <span
         className={cn(
-          'relative h-6 w-11 rounded-full transition-colors',
-          checked ? 'bg-primary' : 'bg-secondary',
+          'relative h-6 w-11 shrink-0 rounded-full border transition-colors',
+          checked ? 'border-primary bg-primary' : 'border-border bg-secondary',
         )}
       >
         <span
           className={cn(
-            'absolute top-0.5 size-5 rounded-full bg-background transition-transform',
-            checked ? 'translate-x-5' : 'translate-x-0.5',
+            'absolute top-1/2 size-5 -translate-y-1/2 rounded-full bg-white shadow-sm transition-all',
+            checked ? 'right-0.5' : 'left-0.5',
           )}
         />
       </span>
