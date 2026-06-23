@@ -108,6 +108,22 @@ export class InMemoryBetRepository implements BetRepository {
   async saveBatch(bets: Bet[]): Promise<void> {
     for (const b of bets) this.bets.set(b.id, b);
   }
+
+  async leaderboard(since: Date, limit: number) {
+    const byPlayer = new Map<string, { profitCents: bigint; totalBets: number }>();
+    for (const b of this.bets.values()) {
+      if (b.createdAt < since) continue;
+      if (b.status !== "WON" && b.status !== "LOST") continue;
+      const acc = byPlayer.get(b.playerId) ?? { profitCents: 0n, totalBets: 0 };
+      acc.profitCents += (b.payoutCents ?? 0n) - b.amountCents;
+      acc.totalBets += 1;
+      byPlayer.set(b.playerId, acc);
+    }
+    return [...byPlayer.entries()]
+      .map(([playerId, v]) => ({ playerId, profitCents: v.profitCents, totalBets: v.totalBets }))
+      .sort((a, b) => (b.profitCents > a.profitCents ? 1 : b.profitCents < a.profitCents ? -1 : 0))
+      .slice(0, limit);
+  }
 }
 
 /**

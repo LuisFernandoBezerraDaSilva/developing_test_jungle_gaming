@@ -177,6 +177,21 @@ export class GameService {
     };
   }
 
+  async getLeaderboard(period: "24h" | "week", limit = 10) {
+    const since = new Date(Date.now() - (period === "week" ? 7 * 24 : 24) * 60 * 60 * 1000);
+    const rows = await this.betRepo.leaderboard(since, limit);
+    const entries = await Promise.all(
+      rows.map(async (r, i) => ({
+        rank: i + 1,
+        playerId: r.playerId,
+        username: await this.resolveUsername(r.playerId),
+        profitCents: r.profitCents.toString(),
+        totalBets: r.totalBets,
+      })),
+    );
+    return { period, entries };
+  }
+
   async getMyBets(playerId: string, page: number, limit: number) {
     const { bets, total } = await this.betRepo.findByPlayerId(playerId, page, limit);
     return {

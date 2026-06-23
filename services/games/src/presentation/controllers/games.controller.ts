@@ -42,6 +42,13 @@ export class GamesController {
     return this.gameService.verifyRound(roundId);
   }
 
+  // Leaderboard (bônus) — top jogadores por lucro líquido no período
+  @Get("leaderboard")
+  async getLeaderboard(@Query("period") period = "24h") {
+    const normalized = period === "week" ? "week" : "24h";
+    return this.gameService.getLeaderboard(normalized);
+  }
+
   @Get("bets/me")
   @UseGuards(JwtGuard)
   async getMyBets(

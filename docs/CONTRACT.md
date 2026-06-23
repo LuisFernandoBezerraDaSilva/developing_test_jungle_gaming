@@ -132,6 +132,22 @@ type VerifyResponse = {
 > consistente com o README ("exibição do **hash** da seed **antes** da rodada"; verificação
 > de "qualquer rodada **passada**").
 
+### `GET /games/leaderboard?period=24h` (sem auth) — bônus
+`period` ∈ `"24h" | "week"` (default `24h`). Top 10 jogadores por **lucro líquido**
+(`Σ payoutCents − Σ amountCents`) sobre apostas liquidadas (`WON`/`LOST`) no período.
+```typescript
+type LeaderboardResponse = {
+  period: "24h" | "week";
+  entries: Array<{
+    rank: number;
+    playerId: string;
+    username: string;
+    profitCents: string;   // pode ser negativo (string), ex: "-10000"
+    totalBets: number;
+  }>;
+};
+```
+
 ### `GET /games/bets/me?page=1&limit=20` (auth)
 ```typescript
 type MyBetsResponse = {

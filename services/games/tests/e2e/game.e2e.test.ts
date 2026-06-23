@@ -254,3 +254,34 @@ describe("Read endpoints", () => {
     expect(settled.body.crashMultiplier).toBe("2.00");
   });
 });
+
+describe("Leaderboard (bonus)", () => {
+  it("ranks players by net profit (settled WON/LOST)", async () => {
+    await engine.newBettingRound();
+    await api("POST", "/bet", { token: "lb-winner", body: { amountCents: "10000" } });
+    await api("POST", "/bet", { token: "lb-loser", body: { amountCents: "10000" } });
+
+    await engine.startRunning("5.00");
+    await api("POST", "/bet/cashout", { token: "lb-winner" }); // payout 50000 → +40000
+    // lb-loser não saca → perde 10000
+    await engine.crashAndSettle("6.00");
+
+    const res = await api("GET", "/leaderboard?period=24h");
+    expect(res.status).toBe(200);
+    expect(res.body.period).toBe("24h");
+
+    const profits = res.body.entries.map((e: any) => BigInt(e.profitCents));
+    // ordenado desc por lucro
+    for (let i = 1; i < profits.length; i++) {
+      expect(profits[i - 1] >= profits[i]).toBe(true);
+    }
+
+    const winner = res.body.entries.find((e: any) => e.playerId === "lb-winner");
+    const loser = res.body.entries.find((e: any) => e.playerId === "lb-loser");
+    expect(winner.profitCents).toBe("40000");
+    expect(winner.username).toBe("user-lb-winner");
+    expect(loser.profitCents).toBe("-10000");
+    // vencedor aparece acima do perdedor
+    expect(res.body.entries.indexOf(winner)).toBeLessThan(res.body.entries.indexOf(loser));
+  });
+});
