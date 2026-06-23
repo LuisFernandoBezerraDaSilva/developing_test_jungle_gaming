@@ -1,6 +1,6 @@
 /**
  * Configuração de ambiente. Valores default apontam para a infra local do
- * docker-compose (Kong em :8000, Keycloak em :8080).
+ * docker-compose (Kong em :8000, Keycloak publicado no host em :8180).
  *
  * AMBIGUIDADE conhecida (sinalizada): o Kong só roteia `/games` e `/wallets`.
  * O WebSocket (socket.io, namespace `/game`) ainda não tem rota Kong definida
@@ -23,7 +23,7 @@ export const env = {
   keycloak: {
     authority: required(
       import.meta.env.VITE_KEYCLOAK_AUTHORITY,
-      'http://localhost:8080/realms/crash-game',
+      'http://localhost:8180/realms/crash-game',
     ),
     clientId: required(import.meta.env.VITE_KEYCLOAK_CLIENT_ID, 'crash-game-client'),
     redirectUri: required(
