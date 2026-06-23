@@ -9,6 +9,7 @@ import { BET_REPOSITORY } from "../../src/domain/bet.repository";
 import { RabbitMQService } from "../../src/infrastructure/rabbitmq.service";
 import { RedisService } from "../../src/infrastructure/redis.service";
 import { KeycloakService } from "../../src/infrastructure/keycloak.service";
+import { MetricsService } from "../../src/infrastructure/metrics.service";
 import { JwtGuard } from "../../src/infrastructure/jwt.guard";
 import {
   InMemoryBus,
@@ -77,6 +78,7 @@ beforeAll(async () => {
       { provide: RedisService, useValue: new InMemoryRedis() },
       { provide: RoundEngineService, useValue: engine },
       { provide: KeycloakService, useValue: { getUsername: async (id: string) => `user-${id}` } },
+      MetricsService,
     ],
   })
     .overrideGuard(JwtGuard)

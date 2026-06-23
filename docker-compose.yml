@@ -160,6 +160,38 @@ services:
       start_period: 30s
 
   # ---------------------------------------------------------------------------
+  # Prometheus (observabilidade — bônus) — scrapeia /metrics dos serviços
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - games
+      - wallets
+
+  # ---------------------------------------------------------------------------
+  # Grafana (observabilidade — bônus) — datasource + dashboard provisionados
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.4.0
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+  # ---------------------------------------------------------------------------
   # Frontend (placeholder — candidate implements)
   # ---------------------------------------------------------------------------
   # frontend:
@@ -175,3 +207,5 @@ volumes:
   postgres_data:
   rabbitmq_data:
   redis_data:
+  prometheus_data:
+  grafana_data:

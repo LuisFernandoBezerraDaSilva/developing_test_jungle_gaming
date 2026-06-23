@@ -4,6 +4,7 @@ import { WALLET_REPOSITORY } from "../domain/wallet.repository";
 import { InsufficientBalanceError } from "../domain/wallet.entity";
 import { RabbitMQService } from "../infrastructure/rabbitmq.service";
 import { RedisService } from "../infrastructure/redis.service";
+import { MetricsService } from "../infrastructure/metrics.service";
 
 const IDEMPOTENCY_TTL = 86400; // 24h
 
@@ -31,6 +32,7 @@ export class WalletService {
     @Inject(WALLET_REPOSITORY) private readonly walletRepo: WalletRepository,
     private readonly rabbitmq: RabbitMQService,
     private readonly redis: RedisService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async createOrGet(playerId: string): Promise<{ wallet: import("../domain/wallet.entity").Wallet; created: boolean }> {
@@ -75,6 +77,7 @@ export class WalletService {
     const wallet = await this.walletRepo.findByPlayerId(payload.playerId);
     if (!wallet) {
       this.logger.warn(`Wallet not found for player ${payload.playerId}, failing debit`);
+      this.metrics.debits.inc({ result: "failed" });
       await this.rabbitmq.publish("wallet.debit.failed", {
         betId: payload.betId,
         playerId: payload.playerId,
@@ -87,6 +90,7 @@ export class WalletService {
     try {
       wallet.debit(BigInt(payload.amountCents));
       await this.walletRepo.save(wallet);
+      this.metrics.debits.inc({ result: "succeeded" });
       await this.rabbitmq.publish("wallet.debit.succeeded", {
         betId: payload.betId,
         playerId: payload.playerId,
@@ -94,6 +98,7 @@ export class WalletService {
       });
     } catch (err) {
       if (err instanceof InsufficientBalanceError) {
+        this.metrics.debits.inc({ result: "failed" });
         await this.rabbitmq.publish("wallet.debit.failed", {
           betId: payload.betId,
           playerId: payload.playerId,
@@ -120,6 +125,7 @@ export class WalletService {
 
     wallet.credit(payoutCents);
     await this.walletRepo.save(wallet);
+    this.metrics.creditedCents.inc(Number(payoutCents));
     this.logger.log(`Credited ${payoutCents} to player ${payload.playerId} for bet ${payload.betId}`);
   }
 }

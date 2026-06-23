@@ -6,6 +6,7 @@ import { WalletService } from "../../src/application/wallet.service";
 import { WALLET_REPOSITORY } from "../../src/domain/wallet.repository";
 import { RabbitMQService } from "../../src/infrastructure/rabbitmq.service";
 import { RedisService } from "../../src/infrastructure/redis.service";
+import { MetricsService } from "../../src/infrastructure/metrics.service";
 import { JwtGuard } from "../../src/infrastructure/jwt.guard";
 import { InMemoryBus, InMemoryRedis, InMemoryWalletRepository } from "./helpers";
 
@@ -62,6 +63,7 @@ beforeAll(async () => {
       { provide: WALLET_REPOSITORY, useValue: repo },
       { provide: RabbitMQService, useValue: bus },
       { provide: RedisService, useValue: new InMemoryRedis() },
+      MetricsService,
     ],
   })
     .overrideGuard(JwtGuard)

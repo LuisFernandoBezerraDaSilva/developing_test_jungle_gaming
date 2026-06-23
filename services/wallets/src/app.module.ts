@@ -3,6 +3,7 @@ import { WalletsController } from "./presentation/controllers/wallets.controller
 import { PrismaService } from "./infrastructure/prisma.service";
 import { RabbitMQService } from "./infrastructure/rabbitmq.service";
 import { RedisService } from "./infrastructure/redis.service";
+import { MetricsService } from "./infrastructure/metrics.service";
 import { WalletPrismaRepository } from "./infrastructure/wallet.prisma-repository";
 import { WalletService } from "./application/wallet.service";
 import { WALLET_REPOSITORY } from "./domain/wallet.repository";
@@ -14,6 +15,7 @@ import { JwtGuard } from "./infrastructure/jwt.guard";
     PrismaService,
     RabbitMQService,
     RedisService,
+    MetricsService,
     JwtGuard,
     { provide: WALLET_REPOSITORY, useClass: WalletPrismaRepository },
     WalletService,

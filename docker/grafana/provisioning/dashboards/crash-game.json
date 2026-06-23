@@ -1,0 +1,57 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "RTP (creditado / apostado)",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 3 } },
+      "targets": [
+        {
+          "expr": "crash_credited_cents_total / clamp_min(crash_wagered_cents_total, 1)",
+          "legendFormat": "RTP"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Apostas (total)",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+      "targets": [{ "expr": "crash_bets_placed_total", "legendFormat": "bets" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Volume apostado (centavos)",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "targets": [{ "expr": "crash_wagered_cents_total", "legendFormat": "wagered" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Débitos por resultado (taxa)",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 6 },
+      "targets": [
+        { "expr": "rate(crash_debits_total[1m])", "legendFormat": "{{result}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Event loop lag (p99, games)",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 6 },
+      "targets": [
+        {
+          "expr": "nodejs_eventloop_lag_p99_seconds{service=\"games\"}",
+          "legendFormat": "games"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["crash-game"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "title": "Crash Game — Observabilidade",
+  "uid": "crash-game-obs",
+  "version": 1
+}

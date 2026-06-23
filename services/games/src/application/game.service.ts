@@ -12,6 +12,7 @@ import { BET_REPOSITORY } from "../domain/bet.repository";
 import { RabbitMQService } from "../infrastructure/rabbitmq.service";
 import { RedisService } from "../infrastructure/redis.service";
 import { KeycloakService } from "../infrastructure/keycloak.service";
+import { MetricsService } from "../infrastructure/metrics.service";
 import { RoundEngineService } from "./round-engine.service";
 import { Bet } from "../domain/bet.entity";
 import { randomUUID } from "crypto";
@@ -39,6 +40,7 @@ export class GameService {
     private readonly redis: RedisService,
     private readonly engine: RoundEngineService,
     private readonly keycloak: KeycloakService,
+    private readonly metrics: MetricsService,
   ) {}
 
   setGateway(gateway: { emitToPlayer: (playerId: string, event: string, data: unknown) => void; emitAll: (event: string, data: unknown) => void }): void {
@@ -74,6 +76,9 @@ export class GameService {
 
     round.placeBet(bet);
     await this.betRepo.create(bet);
+
+    this.metrics.betsPlaced.inc();
+    this.metrics.wageredCents.inc(Number(amountCents));
 
     await this.rabbitmq.publish("bet.placed", {
       betId: bet.id,

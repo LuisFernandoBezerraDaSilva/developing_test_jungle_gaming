@@ -2,15 +2,26 @@ import { Controller, Get, Post, UseGuards, Req, Res } from "@nestjs/common";
 import { HealthCheckResponseDto } from "../dtos/health-check-response.dto";
 import { WalletService } from "../../application/wallet.service";
 import { JwtGuard } from "../../infrastructure/jwt.guard";
+import { MetricsService } from "../../infrastructure/metrics.service";
 import type { Request, Response } from "express";
 
 @Controller()
 export class WalletsController {
-  constructor(private readonly walletService: WalletService) {}
+  constructor(
+    private readonly walletService: WalletService,
+    private readonly metrics: MetricsService,
+  ) {}
 
   @Get("health")
   check(): HealthCheckResponseDto {
     return { status: "ok", service: "wallets" };
+  }
+
+  // Observabilidade (bônus) — scrapeado pelo Prometheus
+  @Get("metrics")
+  async getMetrics(@Res() res: Response): Promise<void> {
+    res.setHeader("Content-Type", this.metrics.registry.contentType);
+    res.send(await this.metrics.scrape());
   }
 
   // Kong strips /wallets prefix — routes below are relative to service root

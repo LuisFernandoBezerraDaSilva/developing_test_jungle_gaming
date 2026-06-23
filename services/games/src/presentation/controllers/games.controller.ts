@@ -5,6 +5,7 @@ import {
   Body,
   UseGuards,
   Req,
+  Res,
   Query,
   Param,
   HttpCode,
@@ -12,15 +13,26 @@ import {
 import { HealthCheckResponseDto } from "../dtos/health-check-response.dto";
 import { GameService } from "../../application/game.service";
 import { JwtGuard } from "../../infrastructure/jwt.guard";
-import type { Request } from "express";
+import { MetricsService } from "../../infrastructure/metrics.service";
+import type { Request, Response } from "express";
 
 @Controller()
 export class GamesController {
-  constructor(private readonly gameService: GameService) {}
+  constructor(
+    private readonly gameService: GameService,
+    private readonly metrics: MetricsService,
+  ) {}
 
   @Get("health")
   check(): HealthCheckResponseDto {
     return { status: "ok", service: "games" };
+  }
+
+  // Observabilidade (bônus) — scrapeado pelo Prometheus
+  @Get("metrics")
+  async getMetrics(@Res() res: Response): Promise<void> {
+    res.setHeader("Content-Type", this.metrics.registry.contentType);
+    res.send(await this.metrics.scrape());
   }
 
   // Kong strips /games prefix, so routes below are relative to service root
