@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Backend — testes unitários + E2E (em processo, sem Docker) dos dois serviços
+  # ---------------------------------------------------------------------------
+  backend:
+    name: backend (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [games, wallets]
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Typecheck
+        run: bunx tsc --noEmit
+
+      - name: Unit + E2E tests
+        run: bun test tests/unit tests/e2e
+
+  # ---------------------------------------------------------------------------
+  # Frontend — typecheck, testes (vitest) e build de produção
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Unit tests (vitest)
+        run: bun run test
+
+      - name: Production build
+        run: bun run build
