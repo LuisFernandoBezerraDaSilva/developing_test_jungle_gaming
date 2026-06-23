@@ -14,9 +14,21 @@ import {
 } from "../domain/provably-fair";
 import { randomUUID } from "crypto";
 
-const BETTING_WINDOW_SECONDS = 10;
+const BETTING_WINDOW_SECONDS = Number(process.env.GAME_BETTING_WINDOW_SECONDS ?? 10);
 const TICK_INTERVAL_MS = 100;
 const K = 0.06;
+
+// --- Modo determinístico (bônus: seed reproduzível p/ E2E) ---------------------
+// Ativos apenas quando as envs estão setadas; em produção o comportamento é o
+// padrão (seed aleatório + crash provably-fair).
+//  - GAME_FIXED_SERVER_SEED: usa um serverSeed fixo → hash/crash reproduzíveis
+//    E ainda verificáveis (o crash continua derivando de seed+nonce).
+//  - GAME_FORCE_CRASH_MULTIPLIER: força o crash num valor específico (ex: "1.50")
+//    para simular cenários — escape hatch SÓ de teste (quebra o /verify por design).
+const FIXED_SERVER_SEED = process.env.GAME_FIXED_SERVER_SEED || null;
+const FORCE_CRASH_MULTIPLIER = process.env.GAME_FORCE_CRASH_MULTIPLIER
+  ? Math.max(1, Number(process.env.GAME_FORCE_CRASH_MULTIPLIER))
+  : null;
 
 @Injectable()
 export class RoundEngineService implements OnModuleDestroy {
@@ -76,7 +88,7 @@ export class RoundEngineService implements OnModuleDestroy {
   }
 
   private async startBettingPhase(): Promise<void> {
-    const serverSeed = randomBytes(32).toString("hex");
+    const serverSeed = FIXED_SERVER_SEED ?? randomBytes(32).toString("hex");
     const serverHash = createHash("sha256").update(serverSeed).digest("hex");
     const nonce = await this.roundRepo.getNextNonce();
 
@@ -119,7 +131,9 @@ export class RoundEngineService implements OnModuleDestroy {
     if (!this.activeRound) return;
 
     const round = this.activeRound;
-    const crashPoint = calculateCrashPoint(round.serverSeed, round.clientSeed, round.nonce);
+    const crashPoint =
+      FORCE_CRASH_MULTIPLIER ??
+      calculateCrashPoint(round.serverSeed, round.clientSeed, round.nonce);
     round.startRunning();
     await this.roundRepo.save(round);
 

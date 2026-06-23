@@ -17,7 +17,7 @@ import { Bet } from "../domain/bet.entity";
 import { randomUUID } from "crypto";
 import { multiplierAt } from "../domain/provably-fair";
 
-const BETTING_WINDOW_SECONDS = 10;
+const BETTING_WINDOW_SECONDS = Number(process.env.GAME_BETTING_WINDOW_SECONDS ?? 10);
 const IDEMPOTENCY_TTL = 86400;
 
 interface DebitResultPayload {

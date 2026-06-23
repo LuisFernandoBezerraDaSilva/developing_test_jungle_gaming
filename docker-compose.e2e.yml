@@ -1,0 +1,19 @@
+# Override determinístico para testes E2E / cenários reprodutíveis (bônus).
+#
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d
+#
+# Com este override o Game Service:
+#   - usa um serverSeed fixo (hash/crash reproduzíveis e ainda verificáveis);
+#   - força TODA rodada a crashar em 1.50x (simula um cenário específico);
+#   - encurta a janela de apostas para 3s (testes mais rápidos).
+#
+# Sem o override, o comportamento é o padrão de produção (seed aleatório +
+# crash provably-fair). GAME_FORCE_CRASH_MULTIPLIER é um escape hatch SÓ de
+# teste — ele quebra a verificação provably-fair por design.
+services:
+  games:
+    environment:
+      GAME_FIXED_SERVER_SEED: "0000000000000000000000000000000000000000000000000000000000000001"
+      GAME_FORCE_CRASH_MULTIPLIER: "1.50"
+      GAME_BETTING_WINDOW_SECONDS: "3"
