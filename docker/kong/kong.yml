@@ -49,6 +49,34 @@ services:
 
 plugins:
   # ---------------------------------------------------------------------------
+  # CORS — habilita o frontend (Vite dev em :5173) a chamar a API cross-origin.
+  # Em produção o front é servido na mesma origem do Kong (:8000) e o CORS é
+  # inofensivo; em dev ele é necessário porque o Vite roda em outra porta.
+  # Trata o preflight OPTIONS e injeta os headers Access-Control-*.
+  # ---------------------------------------------------------------------------
+  - name: cors
+    config:
+      origins:
+        - http://localhost:5173
+        - http://localhost:3000
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Authorization
+        - Content-Type
+        - Accept
+        - Origin
+      exposed_headers:
+        - X-Kong-Request-Id
+      credentials: true
+      max_age: 3600
+
+  # ---------------------------------------------------------------------------
   # Rate limiting (bonus ⭐) — applied globally
   # ---------------------------------------------------------------------------
   - name: rate-limiting
