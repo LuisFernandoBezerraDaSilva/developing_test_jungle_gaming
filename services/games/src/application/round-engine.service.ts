@@ -4,8 +4,6 @@ import { randomBytes, createHash } from "crypto";
 import { Round } from "../domain/round.entity";
 import type { RoundRepository } from "../domain/round.repository";
 import { ROUND_REPOSITORY } from "../domain/round.repository";
-import type { BetRepository } from "../domain/bet.repository";
-import { BET_REPOSITORY } from "../domain/bet.repository";
 import {
   calculateCrashPoint,
   multiplierAt,
@@ -41,7 +39,6 @@ export class RoundEngineService implements OnModuleDestroy {
 
   constructor(
     @Inject(ROUND_REPOSITORY) private readonly roundRepo: RoundRepository,
-    @Inject(BET_REPOSITORY) private readonly betRepo: BetRepository,
   ) {}
 
   setServer(io: Server): void {

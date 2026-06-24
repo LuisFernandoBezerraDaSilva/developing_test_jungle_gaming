@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "./prisma.service";
-import { Bet } from "../domain/bet.entity";
+import { Bet, BetStatus } from "../domain/bet.entity";
 import type { BetRepository, LeaderboardRow, OutboxEventInput } from "../domain/bet.repository";
 
 @Injectable()
@@ -106,7 +106,7 @@ export class BetPrismaRepository implements BetRepository {
       roundId: row.roundId,
       playerId: row.playerId,
       amountCents: row.amountCents,
-      status: row.status as any,
+      status: row.status as BetStatus,
       cashoutMultiplier: row.cashoutMultiplier,
       payoutCents: row.payoutCents,
       createdAt: row.createdAt,

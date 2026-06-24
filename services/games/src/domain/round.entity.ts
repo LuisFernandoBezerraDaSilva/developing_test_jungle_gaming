@@ -1,6 +1,5 @@
-import { Bet, BetStatus } from "./bet.entity";
+import { Bet } from "./bet.entity";
 import { multiplierToCentesimos, payoutCents as calcPayout } from "./provably-fair";
-import { randomUUID } from "crypto";
 
 export type RoundPhase = "BETTING" | "RUNNING" | "CRASHED" | "SETTLED";
 

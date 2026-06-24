@@ -8,7 +8,8 @@
     "db:migrate": "bunx prisma migrate deploy",
     "db:generate": "bunx prisma generate",
     "test": "bun test tests/unit",
-    "test:e2e": "bun test tests/e2e"
+    "test:e2e": "bun test tests/e2e",
+    "lint": "eslint src"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.17",
@@ -28,12 +29,15 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@eslint/js": "^9.17.0",
     "@nestjs/testing": "^11.1.17",
     "@types/amqplib": "^0.10.7",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.9",
     "bun-types": "latest",
+    "eslint": "^9.17.0",
     "prisma": "^6.9.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.18.0"
   }
 }

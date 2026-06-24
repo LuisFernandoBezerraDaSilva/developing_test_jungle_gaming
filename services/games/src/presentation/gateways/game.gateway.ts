@@ -15,7 +15,7 @@ import { multiplierAt } from "../../domain/provably-fair";
 
 @WebSocketGateway({ namespace: "/game", cors: { origin: "*" } })
 export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
-  @WebSocketServer() server: Server;
+  @WebSocketServer() server!: Server;
   private readonly logger = new Logger(GameGateway.name);
   private readonly jwksClient: jwksRsa.JwksClient;
 
@@ -51,7 +51,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         const decoded = await this.verifyToken(token);
         const playerId = (decoded as jwt.JwtPayload).sub!;
         await client.join(`player:${playerId}`);
-        (client as any).playerId = playerId;
+        (client as Socket & { playerId?: string }).playerId = playerId;
       } catch {
         this.logger.warn(`Socket ${client.id} sent invalid token — anonymous mode`);
       }
@@ -97,7 +97,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     }
   }
 
-  handleDisconnect(client: Socket): void {
+  handleDisconnect(_client: Socket): void {
     this.engine.onClientDisconnect();
   }
 

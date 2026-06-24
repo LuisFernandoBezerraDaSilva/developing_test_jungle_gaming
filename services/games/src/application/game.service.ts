@@ -3,7 +3,6 @@ import {
   Inject,
   BadRequestException,
   NotFoundException,
-  Logger,
 } from "@nestjs/common";
 import type { RoundRepository } from "../domain/round.repository";
 import { ROUND_REPOSITORY } from "../domain/round.repository";
@@ -30,7 +29,6 @@ interface DebitResultPayload {
 
 @Injectable()
 export class GameService {
-  private readonly logger = new Logger(GameService.name);
   private wsGateway: { emitToPlayer: (playerId: string, event: string, data: unknown) => void; emitAll: (event: string, data: unknown) => void } | null = null;
 
   constructor(

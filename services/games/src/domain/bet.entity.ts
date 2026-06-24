@@ -63,15 +63,4 @@ export class Bet {
     this._status = "REJECTED";
     this.updatedAt = new Date();
   }
-
-  toPublicJSON(username: string) {
-    return {
-      playerId: this.playerId,
-      username,
-      amountCents: this.amountCents.toString(),
-      status: this._status,
-      cashoutMultiplier: this._cashoutMultiplier,
-      payoutCents: this._payoutCents?.toString() ?? null,
-    };
-  }
 }

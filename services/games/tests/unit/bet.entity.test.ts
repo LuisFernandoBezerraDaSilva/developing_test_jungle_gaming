@@ -82,21 +82,3 @@ describe("Bet.reject", () => {
   });
 });
 
-describe("Bet.toPublicJSON", () => {
-  it("serializes amountCents/payoutCents as strings and injects username", () => {
-    const bet = makeBet("PENDING", 10000n);
-    bet.cashout("2.35", 23500n);
-    const json = bet.toPublicJSON("player");
-    expect(json.username).toBe("player");
-    expect(json.amountCents).toBe("10000");
-    expect(json.payoutCents).toBe("23500");
-    expect(typeof json.amountCents).toBe("string");
-    expect(json.status).toBe("CASHED_OUT");
-  });
-
-  it("serializes payoutCents as null when there is none", () => {
-    const json = makeBet("PENDING").toPublicJSON("player");
-    expect(json.payoutCents).toBeNull();
-    expect(json.cashoutMultiplier).toBeNull();
-  });
-});

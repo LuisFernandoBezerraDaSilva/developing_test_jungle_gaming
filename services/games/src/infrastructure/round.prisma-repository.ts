@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "./prisma.service";
-import { Round } from "../domain/round.entity";
-import { Bet } from "../domain/bet.entity";
+import { Round, RoundPhase } from "../domain/round.entity";
+import { Bet, BetStatus } from "../domain/bet.entity";
 import type { RoundRepository } from "../domain/round.repository";
 import type { OutboxEventInput } from "../domain/bet.repository";
 
@@ -161,7 +161,7 @@ export class RoundPrismaRepository implements RoundRepository {
           roundId: b.roundId,
           playerId: b.playerId,
           amountCents: b.amountCents,
-          status: b.status as any,
+          status: b.status as BetStatus,
           cashoutMultiplier: b.cashoutMultiplier,
           payoutCents: b.payoutCents,
           createdAt: b.createdAt,
@@ -171,7 +171,7 @@ export class RoundPrismaRepository implements RoundRepository {
 
     return new Round({
       id: row.id,
-      phase: row.phase as any,
+      phase: row.phase as RoundPhase,
       serverSeed: row.serverSeed,
       serverHash: row.serverHash,
       clientSeed: row.clientSeed,
