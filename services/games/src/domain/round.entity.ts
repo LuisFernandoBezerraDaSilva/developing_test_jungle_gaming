@@ -1,5 +1,6 @@
 import { Bet } from "./bet.entity";
-import { multiplierToCentesimos, payoutCents as calcPayout } from "./provably-fair";
+import { multiplierToCentesimos } from "./provably-fair";
+import { Money } from "./money";
 
 export type RoundPhase = "BETTING" | "RUNNING" | "CRASHED" | "SETTLED";
 
@@ -78,8 +79,8 @@ export class Round {
     if (!bet || bet.status !== "PENDING") throw new Error("NO_PENDING_BET");
 
     const multiplierCentesimos = multiplierToCentesimos(parseFloat(currentMultiplierStr));
-    const payout = calcPayout(bet.amountCents, multiplierCentesimos);
-    bet.cashout(currentMultiplierStr, payout);
+    const payout = Money.fromCents(bet.amountCents).applyMultiplier(multiplierCentesimos);
+    bet.cashout(currentMultiplierStr, payout.centsValue);
     return bet;
   }
 
