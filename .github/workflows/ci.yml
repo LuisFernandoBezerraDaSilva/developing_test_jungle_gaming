@@ -60,8 +60,11 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      # Só os testes unitários (vitest). Os E2E de browser (Playwright) NÃO
+      # rodam no CI — exigem navegador + a stack no ar; ficam para execução
+      # local via `bun run test:e2e` (ou `bun run test`, que roda unit + e2e).
       - name: Unit tests (vitest)
-        run: bun run test
+        run: bun run test:ci
 
       - name: Production build
         run: bun run build
