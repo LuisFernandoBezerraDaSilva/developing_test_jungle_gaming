@@ -18,6 +18,9 @@ dist-ssr
 /blob-report/
 /playwright/.cache/
 
+# Storybook
+/storybook-static/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
