@@ -25,9 +25,9 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     await this.channel.bindQueue(DLQ, `${EXCHANGE}.dlx`, "#");
   }
 
-  async publish<T>(routingKey: string, payload: T): Promise<void> {
+  async publish<T>(routingKey: string, payload: T, eventId?: string): Promise<void> {
     const envelope = {
-      eventId: crypto.randomUUID(),
+      eventId: eventId ?? crypto.randomUUID(),
       eventType: routingKey,
       occurredAt: new Date().toISOString(),
       payload,

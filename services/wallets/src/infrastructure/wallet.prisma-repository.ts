@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "./prisma.service";
 import { Wallet } from "../domain/wallet.entity";
-import type { WalletRepository } from "../domain/wallet.repository";
+import type { WalletRepository, OutboxEventInput } from "../domain/wallet.repository";
 import { randomUUID } from "crypto";
 
 @Injectable()
@@ -27,6 +28,25 @@ export class WalletPrismaRepository implements WalletRepository {
       },
     });
     return this.toEntity(row);
+  }
+
+  async saveWithOutbox(wallet: Wallet, event: OutboxEventInput): Promise<Wallet> {
+    const [row] = await this.prisma.$transaction([
+      this.prisma.wallet.update({
+        where: { id: wallet.id },
+        data: { balanceCents: wallet.balanceCents, updatedAt: wallet.updatedAt },
+      }),
+      this.prisma.outboxEvent.create({
+        data: { routingKey: event.routingKey, payload: event.payload as Prisma.InputJsonValue },
+      }),
+    ]);
+    return this.toEntity(row);
+  }
+
+  async enqueueOutbox(event: OutboxEventInput): Promise<void> {
+    await this.prisma.outboxEvent.create({
+      data: { routingKey: event.routingKey, payload: event.payload as Prisma.InputJsonValue },
+    });
   }
 
   async createOrGet(playerId: string): Promise<{ wallet: Wallet; created: boolean }> {

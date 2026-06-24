@@ -1,8 +1,10 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "./prisma.service";
 import { Round } from "../domain/round.entity";
 import { Bet } from "../domain/bet.entity";
 import type { RoundRepository } from "../domain/round.repository";
+import type { OutboxEventInput } from "../domain/bet.repository";
 
 type PrismaRoundRow = {
   id: string;
@@ -98,6 +100,37 @@ export class RoundPrismaRepository implements RoundRepository {
         },
       });
     }
+  }
+
+  async saveSettledWithOutbox(round: Round, events: OutboxEventInput[]): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.round.update({
+        where: { id: round.id },
+        data: {
+          phase: round.phase,
+          crashMultiplier: round.crashMultiplier,
+          phaseStartedAt: round.phaseStartedAt,
+          crashedAt: round.crashedAt,
+          settledAt: round.settledAt,
+        },
+      }),
+      ...round.bets.map((bet) =>
+        this.prisma.bet.update({
+          where: { id: bet.id },
+          data: {
+            status: bet.status,
+            cashoutMultiplier: bet.cashoutMultiplier,
+            payoutCents: bet.payoutCents,
+            updatedAt: bet.updatedAt,
+          },
+        }),
+      ),
+      ...events.map((e) =>
+        this.prisma.outboxEvent.create({
+          data: { routingKey: e.routingKey, payload: e.payload as Prisma.InputJsonValue },
+        }),
+      ),
+    ]);
   }
 
   async create(round: Round): Promise<void> {

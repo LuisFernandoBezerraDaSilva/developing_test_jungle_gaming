@@ -54,7 +54,7 @@ async function api(
 
 beforeAll(async () => {
   bus = new InMemoryBus();
-  repo = new InMemoryWalletRepository();
+  repo = new InMemoryWalletRepository(bus);
 
   const moduleRef = await Test.createTestingModule({
     controllers: [WalletsController],

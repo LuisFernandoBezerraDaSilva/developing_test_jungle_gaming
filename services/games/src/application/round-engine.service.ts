@@ -6,7 +6,6 @@ import type { RoundRepository } from "../domain/round.repository";
 import { ROUND_REPOSITORY } from "../domain/round.repository";
 import type { BetRepository } from "../domain/bet.repository";
 import { BET_REPOSITORY } from "../domain/bet.repository";
-import { RabbitMQService } from "../infrastructure/rabbitmq.service";
 import {
   calculateCrashPoint,
   multiplierAt,
@@ -43,7 +42,6 @@ export class RoundEngineService implements OnModuleDestroy {
   constructor(
     @Inject(ROUND_REPOSITORY) private readonly roundRepo: RoundRepository,
     @Inject(BET_REPOSITORY) private readonly betRepo: BetRepository,
-    private readonly rabbitmq: RabbitMQService,
   ) {}
 
   setServer(io: Server): void {
@@ -185,22 +183,23 @@ export class RoundEngineService implements OnModuleDestroy {
 
     this.logger.log(`CRASHED at ${crashMultiplierStr}x — round ${round.id}`);
 
-    // Settle
+    // Settle: persiste a rodada liquidada e enfileira os round.settled na MESMA
+    // transação (outbox). O relay publica no RabbitMQ; o Wallet credita os WON.
     round.settle();
-    await this.roundRepo.save(round);
-
-    // Publish round.settled for each bet
-    for (const bet of round.bets) {
-      if (bet.status === "REJECTED") continue;
-      await this.rabbitmq.publish("round.settled", {
-        betId: bet.id,
-        roundId: round.id,
-        playerId: bet.playerId,
-        outcome: bet.status === "WON" ? "WON" : "LOST",
-        amountCents: bet.amountCents.toString(),
-        payoutCents: (bet.payoutCents ?? 0n).toString(),
-      });
-    }
+    const events = round.bets
+      .filter((bet) => bet.status !== "REJECTED")
+      .map((bet) => ({
+        routingKey: "round.settled",
+        payload: {
+          betId: bet.id,
+          roundId: round.id,
+          playerId: bet.playerId,
+          outcome: bet.status === "WON" ? "WON" : "LOST",
+          amountCents: bet.amountCents.toString(),
+          payoutCents: (bet.payoutCents ?? 0n).toString(),
+        },
+      }));
+    await this.roundRepo.saveSettledWithOutbox(round, events);
 
     this.activeRound = null;
 

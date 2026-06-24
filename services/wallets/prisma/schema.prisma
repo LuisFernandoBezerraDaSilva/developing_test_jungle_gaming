@@ -17,3 +17,16 @@ model Wallet {
 
   @@map("wallets")
 }
+
+// Outbox transacional (bônus) — ver services/games para a descrição completa.
+// O débito/crédito do saldo e o evento de saída são gravados na mesma transação.
+model OutboxEvent {
+  id          String    @id @default(uuid())
+  routingKey  String
+  payload     Json
+  createdAt   DateTime  @default(now())
+  publishedAt DateTime?
+
+  @@index([publishedAt])
+  @@map("outbox_events")
+}

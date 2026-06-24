@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "./prisma.service";
 import { Bet } from "../domain/bet.entity";
-import type { BetRepository, LeaderboardRow } from "../domain/bet.repository";
+import type { BetRepository, LeaderboardRow, OutboxEventInput } from "../domain/bet.repository";
 
 @Injectable()
 export class BetPrismaRepository implements BetRepository {
@@ -43,6 +44,26 @@ export class BetPrismaRepository implements BetRepository {
         status: bet.status,
       },
     });
+  }
+
+  async createWithOutbox(bet: Bet, event: OutboxEventInput): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.bet.create({
+        data: {
+          id: bet.id,
+          roundId: bet.roundId,
+          playerId: bet.playerId,
+          amountCents: bet.amountCents,
+          status: bet.status,
+        },
+      }),
+      this.prisma.outboxEvent.create({
+        data: {
+          routingKey: event.routingKey,
+          payload: event.payload as Prisma.InputJsonValue,
+        },
+      }),
+    ]);
   }
 
   async saveBatch(bets: Bet[]): Promise<void> {

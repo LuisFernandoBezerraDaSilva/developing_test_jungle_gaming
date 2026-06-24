@@ -66,6 +66,9 @@ export class InMemoryRoundRepository implements RoundRepository {
   readonly rounds = new Map<string, Round>();
   private nonce = 0;
 
+  /** O bus simula o relay do outbox: ao gravar, "publica" os eventos. */
+  constructor(private readonly bus?: InMemoryBus) {}
+
   async findCurrent(): Promise<Round | null> {
     const active = [...this.rounds.values()].find((r) => r.phase !== "SETTLED");
     if (active) return active;
@@ -86,6 +89,10 @@ export class InMemoryRoundRepository implements RoundRepository {
   async create(round: Round): Promise<void> {
     this.rounds.set(round.id, round);
   }
+  async saveSettledWithOutbox(round: Round, events: { routingKey: string; payload: unknown }[]): Promise<void> {
+    this.rounds.set(round.id, round);
+    for (const e of events) await this.bus?.publish(e.routingKey, e.payload);
+  }
   async getNextNonce(): Promise<number> {
     return ++this.nonce;
   }
@@ -93,6 +100,9 @@ export class InMemoryRoundRepository implements RoundRepository {
 
 export class InMemoryBetRepository implements BetRepository {
   readonly bets = new Map<string, Bet>();
+
+  /** O bus simula o relay do outbox: ao gravar, "publica" o evento. */
+  constructor(private readonly bus?: InMemoryBus) {}
 
   async findByPlayerId(playerId: string, page: number, limit: number): Promise<{ bets: Bet[]; total: number }> {
     const all = [...this.bets.values()].filter((b) => b.playerId === playerId).reverse();
@@ -104,6 +114,10 @@ export class InMemoryBetRepository implements BetRepository {
   }
   async create(bet: Bet): Promise<void> {
     this.bets.set(bet.id, bet);
+  }
+  async createWithOutbox(bet: Bet, event: { routingKey: string; payload: unknown }): Promise<void> {
+    this.bets.set(bet.id, bet);
+    await this.bus?.publish(event.routingKey, event.payload);
   }
   async saveBatch(bets: Bet[]): Promise<void> {
     for (const b of bets) this.bets.set(b.id, b);

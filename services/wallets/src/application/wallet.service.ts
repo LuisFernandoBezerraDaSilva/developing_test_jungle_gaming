@@ -78,32 +78,42 @@ export class WalletService {
     if (!wallet) {
       this.logger.warn(`Wallet not found for player ${payload.playerId}, failing debit`);
       this.metrics.debits.inc({ result: "failed" });
-      await this.rabbitmq.publish("wallet.debit.failed", {
-        betId: payload.betId,
-        playerId: payload.playerId,
-        amountCents: payload.amountCents,
-        reason: "INSUFFICIENT_BALANCE",
+      // Sem mudança de estado → só enfileira o evento no outbox.
+      await this.walletRepo.enqueueOutbox({
+        routingKey: "wallet.debit.failed",
+        payload: {
+          betId: payload.betId,
+          playerId: payload.playerId,
+          amountCents: payload.amountCents,
+          reason: "INSUFFICIENT_BALANCE",
+        },
       });
       return;
     }
 
     try {
       wallet.debit(BigInt(payload.amountCents));
-      await this.walletRepo.save(wallet);
-      this.metrics.debits.inc({ result: "succeeded" });
-      await this.rabbitmq.publish("wallet.debit.succeeded", {
-        betId: payload.betId,
-        playerId: payload.playerId,
-        amountCents: payload.amountCents,
-      });
-    } catch (err) {
-      if (err instanceof InsufficientBalanceError) {
-        this.metrics.debits.inc({ result: "failed" });
-        await this.rabbitmq.publish("wallet.debit.failed", {
+      // Outbox: persiste o saldo e enfileira wallet.debit.succeeded atomicamente.
+      await this.walletRepo.saveWithOutbox(wallet, {
+        routingKey: "wallet.debit.succeeded",
+        payload: {
           betId: payload.betId,
           playerId: payload.playerId,
           amountCents: payload.amountCents,
-          reason: "INSUFFICIENT_BALANCE",
+        },
+      });
+      this.metrics.debits.inc({ result: "succeeded" });
+    } catch (err) {
+      if (err instanceof InsufficientBalanceError) {
+        this.metrics.debits.inc({ result: "failed" });
+        await this.walletRepo.enqueueOutbox({
+          routingKey: "wallet.debit.failed",
+          payload: {
+            betId: payload.betId,
+            playerId: payload.playerId,
+            amountCents: payload.amountCents,
+            reason: "INSUFFICIENT_BALANCE",
+          },
         });
       } else {
         throw err;

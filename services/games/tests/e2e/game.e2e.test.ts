@@ -64,8 +64,8 @@ async function api(
 
 beforeAll(async () => {
   bus = new InMemoryBus();
-  roundRepo = new InMemoryRoundRepository();
-  const betRepo = new InMemoryBetRepository();
+  roundRepo = new InMemoryRoundRepository(bus);
+  const betRepo = new InMemoryBetRepository(bus);
   engine = new FakeEngine(roundRepo, bus);
 
   const moduleRef = await Test.createTestingModule({

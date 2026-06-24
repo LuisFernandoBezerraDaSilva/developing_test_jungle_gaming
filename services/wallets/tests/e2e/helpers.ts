@@ -72,6 +72,9 @@ export class InMemoryRedis {
 export class InMemoryWalletRepository implements WalletRepository {
   private readonly wallets = new Map<string, Wallet>();
 
+  /** O bus simula o relay do outbox: ao gravar/enfileirar, "publica" o evento. */
+  constructor(private readonly bus?: InMemoryBus) {}
+
   /** Test helper: seed a wallet with a known balance. */
   seed(playerId: string, balanceCents: bigint): Wallet {
     const wallet = new Wallet({
@@ -98,6 +101,16 @@ export class InMemoryWalletRepository implements WalletRepository {
   async save(wallet: Wallet): Promise<Wallet> {
     this.wallets.set(wallet.playerId, wallet);
     return wallet;
+  }
+
+  async saveWithOutbox(wallet: Wallet, event: { routingKey: string; payload: unknown }): Promise<Wallet> {
+    this.wallets.set(wallet.playerId, wallet);
+    await this.bus?.publish(event.routingKey, event.payload);
+    return wallet;
+  }
+
+  async enqueueOutbox(event: { routingKey: string; payload: unknown }): Promise<void> {
+    await this.bus?.publish(event.routingKey, event.payload);
   }
 
   async createOrGet(playerId: string): Promise<{ wallet: Wallet; created: boolean }> {

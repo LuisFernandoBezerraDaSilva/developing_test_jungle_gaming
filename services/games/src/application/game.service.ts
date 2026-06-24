@@ -75,17 +75,15 @@ export class GameService {
     });
 
     round.placeBet(bet);
-    await this.betRepo.create(bet);
+    // Outbox: cria a aposta e enfileira bet.placed na MESMA transação. O relay
+    // publica no RabbitMQ (eventId estável → idempotência no consumidor).
+    await this.betRepo.createWithOutbox(bet, {
+      routingKey: "bet.placed",
+      payload: { betId: bet.id, roundId: round.id, playerId, amountCents: amountCentsStr },
+    });
 
     this.metrics.betsPlaced.inc();
     this.metrics.wageredCents.inc(Number(amountCents));
-
-    await this.rabbitmq.publish("bet.placed", {
-      betId: bet.id,
-      roundId: round.id,
-      playerId,
-      amountCents: amountCentsStr,
-    });
 
     const username = await this.resolveUsername(playerId);
     this.wsGateway?.emitAll("bet:placed", {

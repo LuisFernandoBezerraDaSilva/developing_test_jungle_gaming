@@ -39,3 +39,19 @@ model Bet {
   @@unique([roundId, playerId])
   @@map("bets")
 }
+
+// Outbox transacional (bônus): o evento é gravado na MESMA transação do estado
+// de domínio; um relay publica no RabbitMQ e marca como publicado. Garante
+// at-least-once na publicação (nenhum evento perdido se o processo cair entre
+// gravar o estado e publicar). A idempotência (inbox Redis) usa o id desta linha
+// como eventId estável.
+model OutboxEvent {
+  id          String    @id @default(uuid())
+  routingKey  String
+  payload     Json
+  createdAt   DateTime  @default(now())
+  publishedAt DateTime?
+
+  @@index([publishedAt])
+  @@map("outbox_events")
+}
